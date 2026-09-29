@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ミニゲーム＆ガチャ</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background-color: #f0f2f5; padding: 20px; margin: 0; }
+        .container { max-width: 650px; margin: 20px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; }
+        .status-bar { background-color: #dfe4ea; padding: 15px; border-radius: 10px; font-size: 18px; font-weight: bold; margin-bottom: 20px; color: #2f3542; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .game-section { border: 1px solid #ced6e0; padding: 20px; border-radius: 10px; margin-bottom: 20px; background-color: #f1f2f6; }
+        .btn { background-color: #ff4757; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 25px; cursor: pointer; transition: transform 0.1s, background-color 0.2s; margin: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn:hover { background-color: #ff6b81; } .btn:active { transform: scale(0.95); }
+        .btn-gacha { background-color: #2ed573; } .btn-gacha:hover { background-color: #26af5f; } .btn-gacha:disabled { background-color: #a4b0be; cursor:not-allowed; }
+        .btn-clicker { background-color: #1e90ff; padding: 20px 40px; font-size: 20px; } .btn-clicker:hover { background-color: #70a1ff; }
+        .btn-slot { background-color: #ffa500; } .btn-slot:hover { background-color: #ffb833; }
+        #reflexBox { width: 80%; height: 100px; margin: 15px auto; background-color: #747d8c; color: white; font-weight: bold; line-height: 100px; border-radius: 10px; cursor: pointer; user-select: none; }
+        .roulette-display { font-size: 32px; font-weight: bold; height: 60px; line-height: 60px; background: #2f3542; color: #fff; border-radius: 10px; margin: 15px auto; width: 80%; letter-spacing: 2px; }
+        .slot-container { display: flex; justify-content: center; gap: 15px; margin: 15px auto; width: 80%; }
+        .slot-reel { flex: 1; height: 80px; line-height: 80px; background-color: #2f3542; color: white; font-size: 28px; font-weight: bold; border-radius: 10px; border: 3px solid #ced6e0; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .result-box { margin-top: 15px; min-height: 80px; border: 2px dashed #ccc; border-radius: 10px; padding: 15px; background-color: #fafafa; font-size: 16px; line-height: 1.6; color: #333; text-align: left; font-weight: bold; overflow-y: auto; max-height: 300px; }
+        .info-text { font-size: 14px; color: #57606f; margin-top: 5px; }
+        .tab-buttons { display: flex; justify-content: center; flex-wrap: wrap; background-color: #ced6e0; border-radius: 8px 8px 0 0; padding: 5px 5px 0 0; }
+        .tab-buttons button { background-color: #b2bec3; border: none; padding: 10px 12px; cursor: pointer; font-weight: bold; border-radius: 5px 5px 0 0; margin: 0 1px 2px 1px; font-size: 13px; color: #2f3542; }
+        .tab-buttons button.active { background-color: #f1f2f6; border-bottom: 2px solid #1e90ff; color: #000; }
+        /* ⑦リズム用デザインスタイル */
+        .rhythm-area { background: #2f3542; padding: 15px; border-radius: 8px; margin: 15px auto; width: 280px; }
+        .rhythm-playfield { position: relative; width: 100%; height: 350px; background: #1e222b; border-radius: 10px; overflow: hidden; border: 2px solid #57606f; }
+        .rhythm-targets-row { position: absolute; top: 20px; left: 0; width: 100%; display: flex; justify-content: space-around; padding: 0 10px; box-sizing: border-box; }
+        .rhythm-target-slot { width: 44px; height: 44px; border: 3px dashed #ff4757; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.3); font-weight: bold; font-size: 14px; background: rgba(255,255,255,0.02); }
+        .rhythm-note { position: absolute; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; user-select: none; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        @keyframes rhythmFlash { 0% { background: #2ed573; color: white; } 100% { background: transparent; } }
+        .target-active { animation: rhythmFlash 0.15s ease-out; }
+
+        /* ⑧ババ抜き用デザインスタイル */
+        .baba-board { border: 2px solid #57606f; padding: 15px; border-radius: 10px; background-color: #222f3e; color: white; text-align: center; }
+        .baba-player-area { margin: 10px 0; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.05); }
+        .baba-player-name { font-weight: bold; font-size: 14px; margin-bottom: 3px; color: #54a0ff; }
+        .baba-ai-areas { display: flex; justify-content: space-around; gap: 8px; }
+        .baba-ai-area { flex: 1; padding: 8px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid #57606f; }
+        .baba-ai-name { font-weight: bold; font-size: 12px; margin-bottom: 3px; color: #ff9f43; }
+        .baba-cards-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; min-height: 50px; margin-top: 5px; }
+        .baba-card { width: 32px; height: 48px; background: white; color: black; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 1px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.3); user-select: none; }
+        .baba-card.red { color: #ff4757; }
+        .baba-card.joker { background: #f1c40f; color: #2c3e50; border-color: #f39c12; }
+        .baba-card.back { background: #341f97; color: white; border-color: #5f27cd; font-size: 14px; }
+        .baba-card.selectable { cursor: pointer; border-color: #1dd1a1; box-shadow: 0 0 8px #1dd1a1; transition: transform 0.1s; }
+        .baba-card.selectable:hover { transform: translateY(-4px); }
+        .baba-msg-box { background: #10ac84; color: white; padding: 8px; border-radius: 8px; font-weight: bold; margin: 10px 0; min-height: 20px; font-size: 14px; }
+        .baba-rank-list { margin-top: 10px; text-align: left; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 8px; font-size: 13px; }
+
+        /* ガチャ・図鑑のビジュアルスタイル（指定カラー反映） */
+        .gacha-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; padding: 5px; justify-content: center; }
+        .gacha-card-icon { position: relative; width: 64px; height: 64px; border-radius: 12px; box-shadow: 0 3px 6px rgba(0,0,0,0.15); overflow: hidden; display: inline-flex; align-items: flex-end; justify-content: flex-end; box-sizing: border-box; }
+        .gacha-card-icon .avatar-silhouette { position: absolute; top: 4px; left: calc(50% - 24px); width: 48px; height: 48px; background: url('data:image/svg+xml;utf8,<svg xmlns="http://w3.org" viewBox="0 0 24 24" fill="%23ffffff"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>') no-repeat center; background-size: contain; opacity: 0.25; }
+        .gacha-card-icon .rank-text { font-family: 'Arial Black', Impact, sans-serif; font-size: 26px; font-weight: 900; color: #ffffff; text-shadow: 2px 2px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000, 2px -1px 0px #000; padding-right: 4px; padding-bottom: 2px; z-index: 2; line-height: 1; letter-spacing: -1px; }
+        
+        /* ランク別の背景色クラス設定 */
+        .gacha-card-icon.rank-D  { background-color: #1e90ff; border: 2px solid #1072d6; } /* D: 青 */
+        .gacha-card-icon.rank-C  { background-color: #ffd32a; border: 2px solid #e0b516; } /* C: 黄色 */
+        .gacha-card-icon.rank-B  { background-color: #ff9f43; border: 2px solid #e08226; } /* B: オレンジ */
+        .gacha-card-icon.rank-A  { background-color: #2ed573; border: 2px solid #1fa655; } /* A: 緑 */
+        .gacha-card-icon.rank-AA { background-color: #9b59b6; border: 2px solid #7d4394; } /* AA: 紫 */
+        .gacha-card-icon.rank-S  { background-color: #ff4757; border: 2px solid #d62d3c; } /* S: 赤 */
+
+        /* 図鑑用スタイル */
+        .collection-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 10px; }
+        .collection-item { background: #dfe4ea; border-radius: 8px; padding: 10px 5px; font-size: 13px; font-weight: bold; color: #a4b0be; border: 2px solid transparent; }
+        .collection-item.unlocked { background: white; border-color: #ced6e0; color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .rank-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; color: white; font-weight: bold; font-size: 14px; margin-bottom: 5px; min-width: 25px; }
+
+        /* ⑨バカラ ＆ ⑩投資用デザインスタイル */
+        .baccarat-table { background-color: #0b6623; border: 3px solid #daa520; border-radius: 10px; padding: 15px; color: white; margin-top: 10px; }
+        .baccarat-flex { display: flex; justify-content: space-around; margin: 10px 0; }
+        .baccarat-side { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; width: 45%; }
+        .invest-panel { background-color: #2c3e50; color: white; border-radius: 10px; padding: 20px; text-align: left; }
+        .chart-simulated { background-color: #1a252f; height: 60px; line-height: 60px; font-size: 24px; text-align: center; border-radius: 6px; font-weight: bold; margin: 10px 0; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🎮 ミニゲーム＆ガチャ</h1>
+    <div class="status-bar">
+        <div>所持スコア: <span id="scoreDisplay">0</span> pt</div>
+        <div>&nbsp;&nbsp;|&nbsp;&nbsp; 累計ガチャ回数: <span id="counterDisplay">0</span> 回</div>
+        <button class="btn" style="padding: 4px 10px; font-size: 12px; background-color: #747d8c; margin: 0 0 0 10px; border-radius: 6px;" onclick="resetSaveData()">セーブ消去</button>
+    </div>
+    
+    <div class="game-section">
+        <h2>🕹️ ミニゲームでスコアを稼ぐ</h2>
+        <div class="tab-buttons">
+            <button id="tabBtn1" class="active" onclick="switchGame(1)">①連打</button>
+            <button id="tabBtn2" onclick="switchGame(2)">②数当て</button>
+            <button id="tabBtn3" onclick="switchGame(3)">③反射神経</button>
+            <button id="tabBtn4" onclick="switchGame(4)">④ルーレット</button>
+            <button id="tabBtn5" onclick="switchGame(5)">⑤スロット</button>
+            <button id="tabBtn6" onclick="switchGame(6)">⑥ロシアン</button>
+            <button id="tabBtn7" onclick="switchGame(7)">⑦リズム</button>
+            <button id="tabBtn8" onclick="switchGame(8)">⑧ババ抜き</button>
+            <button id="tabBtn9" onclick="switchGame(9)">⑨バカラ</button>
+            <button id="tabBtn10" onclick="switchGame(10)">⑩投資</button>
+        </div>
+        
+        <div style="background: white; padding: 20px; border-radius: 0 0 10px 10px; border: 1px solid #ced6e0; border-top: none;">
+            <!-- ①連打 -->
+            <div id="game1">
+                <p class="info-text">10秒間ボタンを叩きまくれ！(1連打=1pt)</p>
+                <button class="btn" id="clickerStartBtn" onclick="startClickerGame()">連打ゲーム開始</button>
+                <div style="margin: 15px 0;">残り時間: <span id="clickerTimer">10</span>秒</div>
+                <button class="btn btn-clicker" id="clickerBtn" onclick="countClick()" disabled>叩け！！</button>
+                <div id="clickerResult" style="font-weight: bold; margin-top: 10px;"></div>
+            </div>
+            
+            <!-- ②数当て -->
+            <div id="game2" style="display:none;">
+                <p class="info-text">1〜10の数字を当てよう！(1回10pt消費/当たれば100pt)</p>
+                <input type="number" id="guessInput" min="1" max="10" value="5" style="font-size: 18px; padding: 5px; width: 60px; text-align: center;">
+                <button class="btn" onclick="playGuessGame()">予想する</button>
+                <div id="guessResult" style="font-weight: bold; margin-top: 15px;"></div>
+            </div>
+            
+            <!-- ③反射神経 -->
+            <div id="game3" style="display:none;">
+                <p class="info-text">箱が「緑色」に変わった瞬間に素早くクリック！</p>
+                <button class="btn" id="reflexStartBtn" onclick="startReflexGame()">反射神経ゲーム開始</button>
+                <div id="reflexBox" onclick="clickReflexBox()">ここを注視</div>
+                <div id="reflexResult" style="font-weight: bold; margin-top: 10px;"></div>
+            </div>
+            
+            <!-- ④ルーレット -->
+            <div id="game4" style="display:none;">
+                <p class="info-text">1回10pt消費！運が良ければ最大300ptゲット！</p>
+                <button class="btn" id="rouletteStartBtn" onclick="playRouletteGame()">ルーレットを回す (10pt)</button>
+                <div class="roulette-display" id="rouletteWheel">START</div>
+                <div id="rouletteResult" style="font-weight: bold; margin-top: 10px;"></div>
+            </div>
+            
+            <!-- ⑤スロット -->
+            <div id="game5" style="display:none;">
+                <p class="info-text">1回20pt消費！絵柄が揃えば最大500ptの大当り！</p>
+                <button class="btn btn-slot" id="slotStartBtn" onclick="playSlotGame()">スロットを回す (20pt)</button>
+                <div class="slot-container">
+                    <div class="slot-reel" id="reel1">7</div>
+                    <div class="slot-reel" id="reel2">7</div>
+                    <div class="slot-reel" id="reel3">7</div>
+                </div>
+                <div id="slotResult" style="font-weight: bold; margin-top: 10px;"></div>
+            </div>
+            
+            <!-- ⑥ロシアン -->
+            <div id="game6" style="display:none;">
+                <p class="info-text">1回20pt消費。5/6で生存し5pt獲得！1/6の実弾を引くとスコアが半分に！</p>
+                <button class="btn" id="russianStartBtn" onclick="playRussianRoulette()">引き金を引く (20pt)</button>
+                <div id="russianResult" style="font-weight: bold; margin-top: 15px; font-size: 20px;"></div>
+            </div>
+            
+            <!-- ⑦リズム -->
+            <div id="game7" style="display:none;">
+                <p class="info-text">下から丸ノーツが昇ってくるぞ！上部の判定枠（点線）に重なった瞬間に対応する矢印キーを叩け！</p>
+                <div style="margin-bottom: 10px; font-weight: bold;">
+                    難易度: 
+                    <select id="rhythmDifficulty" style="font-size: 16px; padding: 5px 10px;">
+                        <option value="easy">イージー</option>
+                        <option value="normal" selected>--ノーマル--</option>
+                        <option value="hard">ハード（高密度）</option>
+                        <option value="crazy">バカムズい（超弾幕）</option>
+                    </select>
+                </div>
+                <button class="btn" id="rhythmStartBtn" onclick="startRhythmGame()" style="background-color: #9b59b6;">ゲーム開始</button>
+                <div style="margin: 5px 0; font-weight: bold;">残り時間: <span id="rhythmTimer">30</span>秒 | 獲得可能pt: <span id="rhythmCurrentScore">0</span></div>
+                <div class="rhythm-area">
+                    <div class="rhythm-playfield">
+                        <div class="rhythm-targets-row">
+                            <div class="rhythm-target-slot" id="target_⚪">←</div>
+                            <div class="rhythm-target-slot" id="target_🔵">↓</div>
+                            <div class="rhythm-target-slot" id="target_🟢">↑</div>
+                            <div class="rhythm-target-slot" id="target_🔴">→</div>
+                        </div>
+                        <div id="notesContainer"></div>
+                    </div>
+                </div>
+                <div id="rhythmJudgeDisplay" style="font-size: 24px; font-weight: bold; height: 30px; color: #ff4757;"></div>
+                <div id="rhythmResult" style="font-weight: bold; margin-top: 10px;"></div>
+            </div>
+            
+            <!-- ⑧ババ抜き -->
+            <div id="game8" style="display:none;">
+                <p class="info-text" style="color:#333;">参加費無料！AI（3人）とババ抜き対戦！勝ち抜けた順位に応じてガチャポイントがもらえるぞ！</p>
+                <div class="baba-board">
+                    <div class="baba-ai-areas">
+                        <div class="baba-ai-area" id="baba_area_1"><div class="baba-ai-name" id="baba_name_1">AI 1</div><div class="baba-cards-row" id="baba_cards_1"></div></div>
+                        <div class="baba-ai-area" id="baba_area_2"><div class="baba-ai-name" id="baba_name_2">AI 2</div><div class="baba-cards-row" id="baba_cards_2"></div></div>
+                        <div class="baba-ai-area" id="baba_area_3"><div class="baba-ai-name" id="baba_name_3">AI 3</div><div class="baba-cards-row" id="baba_cards_3"></div></div>
+                    </div>
+                    <div class="baba-msg-box" id="babaMsgBox">「対戦開始」を押してね！</div>
+                    <div class="baba-player-area" id="baba_area_0"><div class="baba-player-name" id="baba_name_0">あなた</div><div class="baba-cards-row" id="baba_cards_0"></div></div>
+                    <button class="btn" id="babaStartBtn" onclick="initBabaGame()">対戦開始</button>
+                </div>
+                <div class="baba-rank-list" id="babaRankArea" style="display:none; color:#333;">
+                    <strong>🏆 今回の順位結果:</strong>
+                    <ol id="babaRankLines" style="margin: 5px 0; padding-left: 20px;"></ol>
+                </div>
+            </div>
+            <!-- ⑨バカラ -->
+            <div id="game9" style="display:none;">
+                <p class="info-text">プレイヤーかバンカー、どちらの合計が「9」に近くなるか賭けろ！(タイは8倍配当)</p>
+                <div style="margin-bottom: 10px;">
+                    賭け金: <input type="number" id="baccaratBet" value="10" min="1" style="font-size: 16px; padding: 5px; width: 80px; text-align: center;"> pt
+                </div>
+                <div>
+                    <button class="btn" style="background-color: #1e90ff;" onclick="playBaccarat('Player')">PLAYERに賭ける (2倍)</button>
+                    <button class="btn" style="background-color: #2ed573;" onclick="playBaccarat('Tie')">TIE(タイ)に賭ける (8倍)</button>
+                    <button class="btn" style="background-color: #ff4757;" onclick="playBaccarat('Banker')">BANKERに賭ける (1.95倍)</button>
+                </div>
+                <div class="baccarat-table" id="baccaratTable" style="display: none;">
+                    <div class="baccarat-flex">
+                        <div class="baccarat-side">
+                            <h4 style="margin: 0 0 5px 0;">PLAYER</h4>
+                            <div id="baccaratPlayerCards" style="font-size: 14px; min-height: 20px;"></div>
+                            <div id="baccaratPlayerScore" style="font-weight: bold; margin-top: 5px;"></div>
+                        </div>
+                        <div class="baccarat-side">
+                            <h4 style="margin: 0 0 5px 0;">BANKER</h4>
+                            <div id="baccaratBankerCards" style="font-size: 14px; min-height: 20px;"></div>
+                            <div id="baccaratBankerScore" style="font-weight: bold; margin-top: 5px;"></div>
+                        </div>
+                    </div>
+                    <div id="baccaratResultBox" style="font-size: 18px; font-weight: bold; margin-top: 10px; color: #ffd32a;"></div>
+                </div>
+            </div>
+
+            <!-- ⑩投資 -->
+            <div id="game10" style="display:none;">
+                <p class="info-text">リアルタイムで変動するチャートを読んで売買し、莫大な資産を築こう！</p>
+                <div class="invest-panel">
+                    <div style="font-size: 18px; font-weight: bold;">🪙 模擬ビットコイン (BTC/pt)</div>
+                    <div class="chart-simulated" id="investChart">価格: 100 pt <span id="investTrend" style="font-size:16px;">➔</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
+                        <div>保有数量: <span id="investOwned" style="font-weight:bold; color:#ffd32a;">0.0000</span> BTC</div>
+                        <div>平均取得単価: <span id="investAvgPrice">0</span> pt</div>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        取引pt: <input type="number" id="investAmount" value="50" min="1" style="font-size: 16px; padding: 5px; width: 80px; text-align: center;"> pt
+                    </div>
+                    <div>
+                        <button class="btn" style="background-color: #2ed573;" onclick="buyInvest()">全力買い</button>
+                        <button class="btn" style="background-color: #ff4757;" onclick="sellInvest()">全力売り</button>
+                        <button class="btn" style="background-color: #747d8c; padding: 6px 15px; font-size:14px;" onclick="tickInvestPrice()">チャートを更新する</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="game-section" style="background-color: #e3f2fd;">
+        <h2>🎰 ガチャを回す</h2>
+        <p class="info-text">アイコン表示のプレミアムガチャ（最高ランク：S）</p>
+        <div>
+            <button class="btn btn-gacha" id="gacha1Btn" onclick="drawGacha(1, 100)">1回引く (100pt)</button>
+            <button class="btn btn-gacha" id="gacha11Btn" onclick="drawGacha(11, 1000)">11連引く！ (1000pt)</button>
+            <button class="btn btn-gacha" id="gacha55Btn" onclick="drawGacha(55, 10000)">55連！！ (10000pt)</button>
+        </div>
+        <div class="result-box" id="resultBox"><span style="color: #999; font-weight: normal;">ここにガチャ結果が表示されます</span></div>
+        
+        <h3 style="margin-top: 25px; font-size: 18px; color: #333; text-align: left; border-left: 5px solid #2ed573; padding-left: 10px;">🏆 獲得ランク図鑑</h3>
+        <div class="collection-grid">
+            <div class="collection-item" id="collect_S"><div class="rank-badge" style="background:#ff4757;">S</div><br><span class="count-val">未獲得</span></div>
+            <div class="collection-item" id="collect_AA"><div class="rank-badge" style="background:#9b59b6;">AA</div><br><span class="count-val">未獲得</span></div>
+            <div class="collection-item" id="collect_A"><div class="rank-badge" style="background:#2ed573;">A</div><br><span class="count-val">未獲得</span></div>
+            <div class="collection-item" id="collect_B"><div class="rank-badge" style="background:#ff9f43;">B</div><br><span class="count-val">未獲得</span></div>
+            <div class="collection-item" id="collect_C"><div class="rank-badge" style="background:#ffd32a;">C</div><br><span class="count-val">未獲得</span></div>
+            <div class="collection-item" id="collect_D"><div class="rank-badge" style="background:#1e90ff;">D</div><br><span class="count-val">未獲得</span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let score = 100; 
+let totalGachaCount = 0;
+let collectionData = { S: 0, AA: 0, A: 0, B: 0, C: 0, D: 0 };
+
+// ⑩投資用のグローバル状態
+let investPrice = 100;
+let investOwned = 0;
+let investAvgPrice = 0;
+
+const PRIZES = [
+    { rarity: 'S',  name: 'S',   weight: 3.0 },
+    { rarity: 'AA', name: 'AA',  weight: 7.0 },
+    { rarity: 'A',  name: 'A',   weight: 15.0 },
+    { rarity: 'B',  name: 'B',   weight: 20.0 },
+    { rarity: 'C',  name: 'C',   weight: 25.0 },
+    { rarity: 'D',  name: 'D',   weight: 30.0 }
+];
+
+window.onload = function() { loadGameData(); setInterval(tickInvestPrice, 3000); };
+
+function loadGameData() {
+    const savedScore = localStorage.getItem('minigame_gacha_score');
+    const savedGachaCount = localStorage.getItem('minigame_gacha_count');
+    const savedCollection = localStorage.getItem('minigame_gacha_collection');
+    const savedInvestOwned = localStorage.getItem('minigame_invest_owned');
+    const savedInvestAvg = localStorage.getItem('minigame_invest_avg');
+    
+    if (savedScore !== null) score = parseInt(savedScore, 10);
+    if (savedGachaCount !== null) totalGachaCount = parseInt(savedGachaCount, 10);
+    if (savedInvestOwned !== null) investOwned = parseFloat(savedInvestOwned);
+    if (savedInvestAvg !== null) investAvgPrice = parseInt(savedInvestAvg, 10);
+    if (savedCollection !== null) {
+        try { collectionData = JSON.parse(savedCollection); } catch(e) { console.error(e); }
+    }
+    updateStatus(); 
+    renderCollection();
+}
+
+function updateStatus() {
+    document.getElementById('scoreDisplay').textContent = score;
+    document.getElementById('counterDisplay').textContent = totalGachaCount;
+    document.getElementById('gacha1Btn').disabled = score < 100;
+    document.getElementById('gacha11Btn').disabled = score < 1000;
+    document.getElementById('gacha55Btn').disabled = score < 10000;
+    document.getElementById('rouletteStartBtn').disabled = score < 10;
+    document.getElementById('slotStartBtn').disabled = score < 20 || isSlotRunning;
+    document.getElementById('russianStartBtn').disabled = score < 20;
+    document.getElementById('rhythmStartBtn').disabled = isRhythmRunning;
+    
+    // 投資UIの動的更新
+    document.getElementById('investOwned').textContent = investOwned.toFixed(4);
+    document.getElementById('investAvgPrice').textContent = investAvgPrice;
+
+    localStorage.setItem('minigame_gacha_score', score);
+    localStorage.setItem('minigame_gacha_count', totalGachaCount);
+    localStorage.setItem('minigame_invest_owned', investOwned);
+    localStorage.setItem('minigame_invest_avg', investAvgPrice);
+    localStorage.setItem('minigame_gacha_collection', JSON.stringify(collectionData));
+}
+
+function renderCollection() {
+    for (const rank in collectionData) {
+        const itemEl = document.getElementById(`collect_${rank}`);
+        if (!itemEl) continue;
+        const countSpan = itemEl.querySelector('.count-val');
+        if (collectionData[rank] > 0) {
+            itemEl.classList.add('unlocked');
+            countSpan.textContent = collectionData[rank] + " 個";
+        } else {
+            itemEl.classList.remove('unlocked');
+            countSpan.textContent = "未獲得";
+        }
+    }
+}
+
+function resetSaveData() {
+    if (confirm("投資のポジションや図鑑を含むすべてのセーブデータをリセットしますか？")) {
+        localStorage.clear();
+        score = 100;
+        totalGachaCount = 0;
+        investPrice = 100;
+        investOwned = 0;
+        investAvgPrice = 0;
+        collectionData = { S: 0, AA: 0, A: 0, B: 0, C: 0, D: 0 };
+        updateStatus();
+        renderCollection();
+        document.getElementById('resultBox').innerHTML = '<span style="color: #999; font-weight: normal;">ここにガチャ結果が表示されます</span>';
+        alert("データをすべてリセットしました！");
+    }
+}
+
+function switchGame(gameNum) {
+    for(let i=1; i<=10; i++) {
+        const gEl = document.getElementById(`game${i}`);
+        const tEl = document.getElementById(`tabBtn${i}`);
+        if(gEl) gEl.style.display = i === gameNum ? 'block' : 'none';
+        if(tEl) tEl.className = i === gameNum ? 'active' : '';
+    }
+    if(isRhythmRunning) endRhythmGame();
+}
+// ①連打
+let clickCount = 0; let clickerTimerId; let isClickerRunning = false;
+function startClickerGame() {
+    if(isClickerRunning) return; isClickerRunning = true; clickCount = 0;
+    document.getElementById('clickerResult').textContent = ""; document.getElementById('clickerStartBtn').disabled = true; document.getElementById('clickerBtn').disabled = false;
+    let timeLeft = 10; document.getElementById('clickerTimer').textContent = timeLeft;
+    clickerTimerId = setInterval(() => {
+        timeLeft--; document.getElementById('clickerTimer').textContent = timeLeft;
+        if(timeLeft <= 0) {
+            clearInterval(clickerTimerId); isClickerRunning = false; document.getElementById('clickerStartBtn').disabled = false; document.getElementById('clickerBtn').disabled = true;
+            score += clickCount; document.getElementById('clickerResult').textContent = `終了！ ${clickCount}回連打して ${clickCount}pt 獲得！`; updateStatus();
+        }
+    }, 1000);
+}
+function countClick() { clickCount++; document.getElementById('clickerResult').textContent = `連打数: ${clickCount}`; }
+
+// ②数当て
+function playGuessGame() {
+    if (score < 10) return;
+    const inputEl = document.getElementById('guessInput'); const userGuess = parseInt(inputEl.value);
+    if (isNaN(userGuess) || userGuess < 1 || userGuess > 10) { alert("1から10の数字を入力してください"); return; }
+    score -= 10; const ans = Math.floor(Math.random() * 10) + 1; const resultEl = document.getElementById('guessResult');
+    if(userGuess === ans) { score += 100; resultEl.innerHTML = `正解は 【${ans}】！ <span style="color:green;">100pt獲得！</span>`; }
+    else { resultEl.innerHTML = `正解は 【${ans}】（予想: ${userGuess}）<br><span style="color:red;">ハズレです。</span>`; }
+    updateStatus();
+}
+
+// ③反射神経
+let reflexState = "idle"; let reflexTimeoutId; let reflexStartTime;
+function startReflexGame() {
+    const box = document.getElementById('reflexBox'); const res = document.getElementById('reflexResult');
+    document.getElementById('reflexStartBtn').disabled = true; res.textContent = "";
+    box.style.backgroundColor = "#ff4757"; box.textContent = "まだ押すな！赤のまま待て..."; reflexState = "waiting";
+    const randomDelay = Math.random() * 3000 + 2000;
+    reflexTimeoutId = setTimeout(() => { box.style.backgroundColor = "#2ed573"; box.textContent = "今だ！押せ！！！"; reflexState = "go"; reflexStartTime = Date.now(); }, randomDelay);
+}
+function clickReflexBox() {
+    const box = document.getElementById('reflexBox'); const res = document.getElementById('reflexResult');
+    if (reflexState === "waiting") { clearTimeout(reflexTimeoutId); box.style.backgroundColor = "#747d8c"; box.textContent = "ここを注視"; res.textContent = "フライングです！"; document.getElementById('reflexStartBtn').disabled = false; reflexState = "idle"; }
+    else if (reflexState === "go") {
+        const duration = Date.now() - reflexStartTime; box.style.backgroundColor = "#747d8c"; box.textContent = "ここを注視";
+        let reward = duration < 250 ? 50 : duration < 400 ? 25 : duration < 600 ? 10 : 2;
+        score += reward; res.innerHTML = `タイム: ${duration}ms<br><span style='color:green;'>${reward}pt 獲得！</span>`;
+        document.getElementById('reflexStartBtn').disabled = false; reflexState = "idle"; updateStatus();
+    }
+}
+
+// ④ルーレット
+let isRouletteRunning = false;
+function playRouletteGame() {
+    if (score < 10 || isRouletteRunning) return;
+    score -= 10; updateStatus(); isRouletteRunning = true; document.getElementById('rouletteStartBtn').disabled = true;
+    const wheel = document.getElementById('rouletteWheel'); const res = document.getElementById('rouletteResult');
+    res.textContent = "抽選中..."; const dummyRewards = ["0 pt", "15 pt", "50 pt", "300 pt"]; let counter = 0;
+    const animationInterval = setInterval(() => { wheel.textContent = dummyRewards[counter % dummyRewards.length]; counter++; }, 60);
+    setTimeout(() => {
+        clearInterval(animationInterval); const rand = Math.random() * 100;
+        let winPoint = rand < 2 ? 300 : rand < 12 ? 50 : rand < 42 ? 15 : 0;
+        let msg = winPoint === 300 ? "<span style='color:#ffaa00;'>🎉超大当り【300 pt】🎉</span>" : winPoint === 50 ? "<span style='color:#ff4757;'>✨当たり！【50 pt】✨</span>" : winPoint === 15 ? "<span style='color:#1e90ff;'>プチ当たり！【15 pt】</span>" : "ハズレ！【0 pt】";
+        score += winPoint; wheel.textContent = `${winPoint} pt`; res.innerHTML = msg; isRouletteRunning = false; updateStatus();
+    }, 1500);
+}
+
+// ⑤スロット
+let slotTimer1 = null; let slotTimer2 = null; let slotTimer3 = null; let isSlotRunning = false;
+function playSlotGame() {
+    if (score < 20 || isSlotRunning) return;
+    score -= 20; updateStatus(); isSlotRunning = true; document.getElementById('slotStartBtn').disabled = true;
+    const res = document.getElementById('slotResult'); if (res) res.textContent = "リール回転中...";
+    const r1 = document.getElementById('reel1'); const r2 = document.getElementById('reel2'); const r3 = document.getElementById('reel3');
+    const symbols = ["7", "BAR", "🍒", "🍊", "🍇"];
+    
+    const rand = Math.random() * 100; let finalReels = ["🍒", "🍇", "🍊"]; let winPoint = 0; let msg = "";
+    if (rand < 1) { finalReels = ["7", "7", "7"]; winPoint = 500; msg = "<span style='color:#ff4757;'>🎰 🔴777🔴 500 pt!</span>"; }
+    else if (rand < 4) { finalReels = ["BAR", "BAR", "BAR"]; winPoint = 150; msg = "<span style='color:#ffaa00;'>⬛BAR⬛ 150 pt!</span>"; }
+    else if (rand < 12) { finalReels = ["🍒", "🍒", "🍒"]; winPoint = 50; msg = "<span style='color:#2ed573;'>🍒🍒🍒 50 pt!</span>"; }
+    else {
+        let d1 = symbols[Math.floor(Math.random() * symbols.length)]; let d2 = symbols[Math.floor(Math.random() * symbols.length)]; let d3 = symbols[Math.floor(Math.random() * symbols.length)];
+        if (d1 === d2 && d2 === d3) { d3 = symbols[(symbols.indexOf(d3) + 1) % symbols.length]; }
+        finalReels = [d1, d2, d3]; winPoint = 0; msg = "<span style='color:#747d8c;'>ハズレ！</span>";
+    }
+    
+    let c1 = 0; let c2 = 1; let c3 = 2;
+    clearInterval(slotTimer1); clearInterval(slotTimer2); clearInterval(slotTimer3);
+    
+    slotTimer1 = setInterval(() => { if(r1) r1.textContent = symbols[c1++ % symbols.length]; }, 50);
+    slotTimer2 = setInterval(() => { if(r2) r2.textContent = symbols[c2++ % symbols.length]; }, 50);
+    slotTimer3 = setInterval(() => { if(r3) r3.textContent = symbols[c3++ % symbols.length]; }, 50);
+    
+    setTimeout(() => { clearInterval(slotTimer1); if(r1) r1.textContent = finalReels[0]; }, 800);
+    setTimeout(() => { clearInterval(slotTimer2); if(r2) r2.textContent = finalReels[1]; }, 1300);
+    setTimeout(() => {
+        clearInterval(slotTimer3); if(r3) r3.textContent = finalReels[2];
+        score += winPoint; if (res) res.innerHTML = msg; isSlotRunning = false; updateStatus();
+    }, 1800);
+}
+
+// ⑥ロシアン
+function playRussianRoulette() {
+    if (score < 20) return; score -= 20; updateStatus();
+    const res = document.getElementById('russianResult'); res.innerHTML = "引き金を引いた！..."; document.getElementById('russianStartBtn').disabled = true;
+    setTimeout(() => {
+        const bullet = Math.floor(Math.random() * 6) + 1;
+        if (bullet === 1) { score = Math.floor(score / 2); res.innerHTML = "<span style='color:#ff4757;'>💥 ドカン！！！ 💥 スコアが半分になりました...</span>"; }
+        else { score += 5; res.innerHTML = "<span style='color:#2ed573;'>🔒 カチッ… 生き残った！ (+5 pt)</span>"; }
+        document.getElementById('russianStartBtn').disabled = false; updateStatus();
+    }, 1000);
+}
+// ⑦リズム
+const RHYTHM_CHARTS = {
+    easy: ["⚪","🔵","🟢","🔴"], 
+    normal: ["⚪","🟢","🔵","🔴","🟢","⚪","🔴","🔵"],
+    hard: ["⚪","🔵","⚪","🔵","🟢","🔴","🟢","🔴","⚪","🟢","🔵","🔴"], 
+    crazy: ["⚪","🔴","🔵","🟢","⚪","⚪","🔴","🔴","🔵","🟢","🔵","🟢","🔴","⚪","🔴","⚪"]
+};
+let isRhythmRunning = false; let rhythmTimerId; let rhythmLoopId; let rhythmSpawnId; 
+let rhythmTimeLeft = 30; let rhythmScore = 0; let activeChart = []; let chartIndex = 0; let liveNotes = [];
+
+function startRhythmGame() {
+    if(isRhythmRunning) return; isRhythmRunning = true; rhythmTimeLeft = 30; rhythmScore = 0; chartIndex = 0; liveNotes = [];
+    document.getElementById('notesContainer').innerHTML = ""; document.getElementById('rhythmResult').textContent = "";
+    document.getElementById('rhythmJudgeDisplay').textContent = ""; document.getElementById('rhythmCurrentScore').textContent = "0";
+    document.getElementById('rhythmTimer').textContent = rhythmTimeLeft; document.getElementById('rhythmDifficulty').disabled = true; updateStatus();
+    
+    const diff = document.getElementById('rhythmDifficulty').value; activeChart = RHYTHM_CHARTS[diff];
+    let spawnInterval = diff === "crazy" ? 160 : diff === "hard" ? 350 : diff === "normal" ? 700 : 1200;
+    
+    rhythmLoopId = setInterval(gameTick, 16);
+    rhythmTimerId = setInterval(() => { 
+        rhythmTimeLeft--; 
+        document.getElementById('rhythmTimer').textContent = rhythmTimeLeft; 
+        if(rhythmTimeLeft <= 0) endRhythmGame(); 
+    }, 1000);
+    
+    rhythmSpawnId = setInterval(spawnNote, spawnInterval); 
+    window.addEventListener('keydown', handleRhythmKeyInput);
+}
+
+function spawnNote() {
+    const type = activeChart[chartIndex % activeChart.length]; chartIndex++;
+    let leftPos = 14; let color = "#fff";
+    if(type === "🔵") { leftPos = 82;  color = "#1e90ff"; } 
+    if(type === "🟢") { leftPos = 150; color = "#2ed573"; } 
+    if(type === "🔴") { leftPos = 218; color = "#ff4757"; }
+    liveNotes.push({ x: leftPos, y: 350, type: type, color: color, hit: false });
+}
+
+function gameTick() {
+    const container = document.getElementById('notesContainer'); if (!container) return; container.innerHTML = "";
+    const diff = document.getElementById('rhythmDifficulty').value; let speed = diff === "crazy" ? 10 : diff === "hard" ? 7 : 5;
+    
+    for (let i = liveNotes.length - 1; i >= 0; i--) {
+        let note = liveNotes[i]; note.y -= speed;
+        if (note.y < -20) { if(!note.hit) showJudge("MISS", "#747d8c"); liveNotes.splice(i, 1); continue; }
+        if(!note.hit) {
+            const el = document.createElement('div'); el.className = 'rhythm-note'; el.style.left = note.x + 'px'; el.style.top = note.y + 'px'; el.style.backgroundColor = note.color; el.textContent = note.type; container.appendChild(el);
+        }
+    }
+}
+
+function handleRhythmKeyInput(e) {
+    if(!isRhythmRunning) return; let targetType = "";
+    if(e.key === "ArrowLeft") targetType = "⚪"; 
+    if(e.key === "ArrowDown") targetType = "🔵"; 
+    if(e.key === "ArrowUp") targetType = "🟢"; 
+    if(e.key === "ArrowRight") targetType = "🔴";
+    if(targetType === "") return; e.preventDefault();
+    
+    const targetY = 20; const slotEl = document.getElementById(`target_${targetType}`);
+    if(slotEl) { slotEl.classList.remove('target-active'); void slotEl.offsetWidth; slotEl.classList.add('target-active'); }
+    
+    for (let i = 0; i < liveNotes.length; i++) {
+        let note = liveNotes[i]; if (note.hit || note.type !== targetType) continue;
+        let distance = Math.abs(note.y - targetY);
+        if (distance < 45) {
+            note.hit = true;
+            if (distance <= 8) { rhythmScore += 10; showJudge("PERFECT!!", "#ffaa00"); } 
+            else if (distance <= 22) { rhythmScore += 5; showJudge("GREAT!", "#2ed573"); } 
+            else { rhythmScore += 2; showJudge("GOOD", "#1e90ff"); }
+            document.getElementById('rhythmCurrentScore').textContent = rhythmScore; break;
+        }
+    }
+}
+
+function showJudge(text, color) { const display = document.getElementById('rhythmJudgeDisplay'); if(display) { display.textContent = text; display.style.color = color; } }
+
+function endRhythmGame() {
+    clearInterval(rhythmLoopId); clearInterval(rhythmTimerId); clearInterval(rhythmSpawnId); isRhythmRunning = false; window.removeEventListener('keydown', handleRhythmKeyInput);
+    const container = document.getElementById('notesContainer'); if(container) container.innerHTML = ""; document.getElementById('rhythmDifficulty').disabled = false;
+    score += rhythmScore; document.getElementById('rhythmResult').innerHTML = `<span style='color:#2ed573;'>終了！ スコア 【+${rhythmScore} pt】 を獲得！</span>`; updateStatus();
+}
+// ⑧ババ抜き
+let babaPlayers = []; let babaTurn = 0; let babaInfo = { ranks: [], active: false };
+function initBabaGame() {
+    document.getElementById('babaStartBtn').style.display = 'none'; document.getElementById('babaRankArea').style.display = 'none'; document.getElementById('babaRankLines').innerHTML = '';
+    babaInfo.ranks = []; babaInfo.active = true;
+    babaPlayers = [
+        { name: "あなた", cards: [], isAI: false, id: 0 }, 
+        { name: "AI 1", cards: [], isAI: true, id: 1 }, 
+        { name: "AI 2", cards: [], isAI: true, id: 2 }, 
+        { name: "AI 3", cards: [], isAI: true, id: 3 }
+    ];
+    let deck = []; const suits = ['♠', '♥', '♦', '♣'];
+    for (let i = 1; i <= 13; i++) { for (let suit of suits) deck.push({ num: i, suit: suit, isJoker: false }); }
+    deck.push({ num: 0, suit: '🃏', isJoker: true });
+    for (let i = deck.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+    let p = 0; while (deck.length > 0) { babaPlayers[p % 4].cards.push(deck.pop()); p++; }
+    for (let i = 0; i < 4; i++) discardBabaPairs(i);
+    babaTurn = 0; printBabaMsg("トランプを配りペアを捨てました。あなたの番です！"); renderBabaBoard(); checkBabaTurn();
+}
+function discardBabaPairs(pId) {
+    let cards = babaPlayers[pId].cards; let keepCards = []; let numMap = {};
+    for (let c of cards) { if (c.isJoker) { keepCards.push(c); continue; } if (!numMap[c.num]) numMap[c.num] = []; numMap[c.num].push(c); }
+    for (let num in numMap) { if (numMap[num].length % 2 !== 0) keepCards.push(...numMap[num]); }
+    babaPlayers[pId].cards = keepCards;
+}
+function renderBabaBoard() {
+    for (let p of babaPlayers) {
+        const row = document.getElementById(`baba_cards_${p.id}`); const nameEl = document.getElementById(`baba_name_${p.id}`); if(!row) continue; row.innerHTML = "";
+        if (babaInfo.ranks.includes(p.id)) { if (nameEl) nameEl.textContent = `${p.name} (あがり！🎉)`; continue; }
+        else if (p.cards.length === 0 && babaInfo.active) { babaInfo.ranks.push(p.id); if (nameEl) nameEl.textContent = `${p.name} (あがり！🎉)`; showBabaRanks(); continue; }
+        if (nameEl) nameEl.textContent = `${p.name} (${p.cards.length}枚)`; let targetId = getNextBabaPlayer(babaTurn);
+        p.cards.forEach((card, idx) => {
+            const cardEl = document.createElement('div'); cardEl.className = 'baba-card';
+            if (!p.isAI) {
+                cardEl.textContent = card.isJoker ? card.suit : card.suit + card.num;
+                if (card.suit === '♥' || card.suit === '♦') cardEl.classList.add('red'); if (card.isJoker) cardEl.classList.add('joker');
+            } else {
+                cardEl.className = 'baba-card back'; cardEl.textContent = '●';
+                if (babaTurn === 0 && p.id === targetId && babaInfo.active) { cardEl.classList.add('selectable'); cardEl.onclick = () => playerBabaDraw(p.id, idx); }
+            }
+            row.appendChild(cardEl);
+        });
+    }
+}
+function getNextBabaPlayer(currId) {
+    let next = (currId + 1) % 4;
+    for (let i = 0; i < 4; i++) { if (babaPlayers[next].cards.length > 0 && !babaInfo.ranks.includes(next)) return next; next = (next + 1) % 4; }
+    return currId;
+}
+function playerBabaDraw(targetId, cardIdx) {
+    if (babaTurn !== 0 || !babaInfo.active) return;
+    let pulled = babaPlayers[targetId].cards.splice(cardIdx, 1)[0]; babaPlayers[0].cards.push(pulled);
+    let cardName = pulled.isJoker ? "ババ(ジョーカー)" : pulled.suit + pulled.num; printBabaMsg(`あなたは ${babaPlayers[targetId].name} から 【${cardName}】 を引きました。`);
+    discardBabaPairs(0); checkBabaWinCondition(); renderBabaBoard();
+    if (babaInfo.active) { babaTurn = getNextBabaPlayer(0); setTimeout(aiBabaTurn, 1200); }
+}
+function aiBabaTurn() {
+    if (!babaInfo.active) return;
+    let currAI = babaPlayers[babaTurn]; let targetId = getNextBabaPlayer(babaTurn);
+    if (targetId === babaTurn) { endBabaGame(); return; }
+    let tgtCards = babaPlayers[targetId].cards; let pulled = tgtCards.splice(Math.floor(Math.random() * tgtCards.length), 1)[0]; currAI.cards.push(pulled);
+    let cardName = pulled.isJoker ? "ババ(ジョーカー)" : pulled.suit + pulled.num; printBabaMsg(`${currAI.name} が ${babaPlayers[targetId].name} からカードを1枚引きました。`);
+    discardBabaPairs(babaTurn); checkBabaWinCondition(); renderBabaBoard();
+    if (babaInfo.active) {
+        babaTurn = getNextBabaPlayer(babaTurn);
+        if (babaTurn === 0) { printBabaMsg("あなたの番です！ 対象のAIの手札から1枚選んで引いてね。"); renderBabaBoard(); }
+        else { setTimeout(aiBabaTurn, 1200); }
+    }
+}
+function checkBabaTurn() { checkBabaWinCondition(); if (babaInfo.active && babaTurn !== 0) setTimeout(aiBabaTurn, 1000); }
+function checkBabaWinCondition() {
+    for (let i = 0; i < 4; i++) { if (!babaInfo.ranks.includes(i) && babaPlayers[i].cards.length === 0) { babaInfo.ranks.push(i); showBabaRanks(); } }
+    if (babaInfo.ranks.length >= 3) { for(let i=0; i<4; i++) { if(!babaInfo.ranks.includes(i)) babaInfo.ranks.push(i); } endBabaGame(); }
+}
+function printBabaMsg(txt) { document.getElementById('babaMsgBox').innerHTML = txt; }
+function showBabaRanks() {
+    const area = document.getElementById('babaRankArea'); const list = document.getElementById('babaRankLines'); area.style.display = 'block'; list.innerHTML = "";
+    babaInfo.ranks.forEach((pId, idx) => { const li = document.createElement('li'); li.textContent = `${idx + 1}位: ${babaPlayers[pId].name}`; list.appendChild(li); });
+}
+function endBabaGame() {
+    babaInfo.active = false; showBabaRanks();
+    let myRank = babaInfo.ranks.indexOf(0) + 1; let prize = myRank === 1 ? 500 : myRank === 2 ? 150 : myRank === 3 ? 50 : 0;
+    score += prize; printBabaMsg(`対戦終了！ あなたは 【${myRank}位】 でした！ 報酬として <span style='color:#ffd32a;'>+${prize} pt</span> 獲得！`);
+    document.getElementById('babaStartBtn').textContent = 'もう一度対戦する'; document.getElementById('babaStartBtn').style.display = 'inline-block'; updateStatus();
+}
+// ⑨バカラ
+function playBaccarat(betSide) {
+    const betInput = document.getElementById('baccaratBet');
+    const betAmount = parseInt(betInput.value, 10);
+    if (isNaN(betAmount) || betAmount < 1) { alert("正しい賭けポイントを入力してください"); return; }
+    if (score < betAmount) { alert("所持スコアが足りません！"); return; }
+
+    score -= betAmount;
+    updateStatus();
+
+    const table = document.getElementById('baccaratTable');
+    table.style.display = 'block';
+
+    // 0〜9の値をランダム生成（バカラの簡略合計スコア計算）
+    const pScore = Math.floor(Math.random() * 10);
+    const bScore = Math.floor(Math.random() * 10);
+
+    // カードの擬似文字表示
+    document.getElementById('baccaratPlayerCards').textContent = "🎴 🎴";
+    document.getElementById('baccaratBankerCards').textContent = "🎴 🎴";
+    document.getElementById('baccaratPlayerScore').textContent = `合計: ${pScore}`;
+    document.getElementById('baccaratBankerScore').textContent = `合計: ${bScore}`;
+
+    let winner = "";
+    if (pScore > bScore) winner = "Player";
+    else if (bScore > pScore) winner = "Banker";
+    else winner = "Tie";
+
+    let msg = `結果: ${winner}の勝ち (P:${pScore} vs B:${bScore})`;
+    if (winner === "Tie") msg = `結果: TIE（引き分け） (P:${pScore} vs B:${bScore})`;
+
+    const resultBox = document.getElementById('baccaratResultBox');
+    if (betSide === winner) {
+        let payout = 0;
+        if (winner === "Player") payout = Math.floor(betAmount * 2);
+        else if (winner === "Banker") payout = Math.floor(betAmount * 1.95);
+        else if (winner === "Tie") payout = Math.floor(betAmount * 8);
+
+        score += payout;
+        resultBox.innerHTML = `${msg}<br><span style="color:#2ed573;">🎉的中！ +${payout} pt 払い戻し！</span>`;
+    } else {
+        resultBox.innerHTML = `${msg}<br><span style="color:#ff4757;">ハズレ... ${betAmount} pt 没収。</span>`;
+    }
+    updateStatus();
+}
+
+// ⑩投資
+function tickInvestPrice() {
+    // -15% 〜 +15% の間で価格がランダムにリアルタイム変動
+    const changePercent = (Math.random() * 30 - 15) / 100;
+    const oldPrice = investPrice;
+    investPrice = Math.max(10, Math.floor(investPrice * (1 + changePercent)));
+
+    const chart = document.getElementById('investChart');
+    const trend = document.getElementById('investTrend');
+    if (!chart || !trend) return;
+
+    chart.childNodes[0].textContent = `価格: ${investPrice} pt `;
+    if (investPrice > oldPrice) {
+        trend.textContent = "▲ 上昇";
+        trend.style.color = "#2ed573";
+    } else if (investPrice < oldPrice) {
+        trend.textContent = "▼ 下落";
+        trend.style.color = "#ff4757";
+    } else {
+        trend.textContent = "➔ 横ばい";
+        trend.style.color = "#747d8c";
+    }
+}
+
+function buyInvest() {
+    const amountInput = document.getElementById('investAmount');
+    const ptAmount = parseInt(amountInput.value, 10);
+    if (isNaN(ptAmount) || ptAmount < 1) { alert("正しい取引ポイントを入力してください"); return; }
+    if (score < ptAmount) { alert("所持スコアが足りません！"); return; }
+
+    const btcBought = ptAmount / investPrice;
+    const totalCost = (investOwned * investAvgPrice) + ptAmount;
+    
+    score -= ptAmount;
+    investOwned += btcBought;
+    investAvgPrice = Math.floor(totalCost / investOwned);
+
+    updateStatus();
+}
+
+function sellInvest() {
+    if (investOwned <= 0) { alert("売却できるBTCを保有していません"); return; }
+
+    const returnPt = Math.floor(investOwned * investPrice);
+    const profit = returnPt - Math.floor(investOwned * investAvgPrice);
+
+    score += returnPt;
+    alert(`すべての保有数量を売却しました！\n精算額: +${returnPt} pt\n損益: ${profit >= 0 ? "+" : ""}${profit} pt`);
+
+    investOwned = 0;
+    investAvgPrice = 0;
+    updateStatus();
+}
+
+// ガチャの処理
+function drawGacha(times, cost) {
+    if (score < cost) return; score -= cost;
+    const resultBox = document.getElementById('resultBox');
+    let htmlContent = '<div class="gacha-grid">';
+    
+    for (let i = 0; i < times; i++) { 
+        const picked = getGachaResult(); 
+        htmlContent += `
+            <div class="gacha-card-icon rank-${picked.rarity}">
+                <div class="avatar-silhouette"></div>
+                <div class="rank-text">${picked.rarity}</div>
+            </div>`;
+        
+        if (collectionData[picked.rarity] !== undefined) {
+            collectionData[picked.rarity]++;
+        }
+        totalGachaCount++; 
+    }
+    
+    htmlContent += '</div>';
+    resultBox.innerHTML = htmlContent; 
+    
+    updateStatus();
+    renderCollection(); 
+}
+
+function getGachaResult() {
+    let totalWeight = 0;
+    for (const prize of PRIZES) { totalWeight += prize.weight; }
+    const rand = Math.random() * totalWeight; let cumulativeWeight = 0;
+    for (const prize of PRIZES) { 
+        cumulativeWeight += prize.weight; 
+        if (rand < cumulativeWeight) return prize; 
+    }
+    return PRIZES[PRIZES.length - 1];
+}
+</script>
+</body>
+</html>
